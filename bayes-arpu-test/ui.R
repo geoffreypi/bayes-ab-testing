@@ -3,78 +3,12 @@
 library(shiny)
 library(plotly)
 
-n = 2
-
-input_controls = selectInput('n','Number of Groups',(1:10))
-input_names = ""
-group_names = ""
-
-if (n>0) {
-  for(i in 0:(n-1)) {
-    # get letter A,B,C,etc
-    c = intToUtf8(65+i)
-    
-    s = paste0('rev_',c)
-    input_names = c(input_names,s)
-    # add an input for total revenue
-    input_controls <- tagAppendChild(input_controls, numericInput(
-      s,
-      paste0('total revenue ',c,':'),
-      min = 0,
-      max = 1e6,
-      value = 5000
-    ))
-    s = paste0('success_',c)
-    input_names = c(input_names,s)
-    # add an input for people who converted (payed)
-    input_controls <- tagAppendChild(input_controls, numericInput(
-      s,
-      paste0('converted payers ',c,':'),
-      min = 0,
-      max = 1e6,
-      value = 200
-    ))
-    s = paste0('total_',c)
-    input_names = c(input_names,s)
-    # add an input for the total number of players
-    input_controls <- tagAppendChild(input_controls, numericInput(
-      s,
-      paste0('all players ',c,':'),
-      min = 0,
-      max = 1e6,
-      value = 10000
-    ))
-    # call the first group control, all the others test 1, test 2, etc
-    if (i==0) {
-      group_names[i+1] = 'control'
-    } else {
-      group_names[i+1] = paste0('test ',i)
-    }
-    s = paste0('name_',c)
-    input_names = c(input_names,s)
-    # add an input to name each group
-    input_controls <- tagAppendChild(input_controls, textInput(
-      s,
-      paste0('name ',c,':'),
-      value = group_names[i+1]
-    ))
-  }
-}
-
-input_names = input_names[-(1:1)]
-
-print(input_names)
-
-print(input_controls)
-
 shinyUI(
   fluidPage(
     titlePanel('Bayesian A/B/n test for ARPU'),
     sidebarLayout(
       sidebarPanel(
-        input_controls,
-        selectInput('group1name','First Group',group_names),
-        selectInput('group2name','Second Group',group_names),
+        selectInput('n_groups','Number of Groups',(2:10),5),
         numericInput(
           'sim_sample',
           'sample size used in simulations:',
@@ -86,6 +20,7 @@ shinyUI(
           'button',
           'Calculate'
         ),
+        uiOutput("allInputs"),
         hr(),
         tags$div(
           class='header', checked = NA,

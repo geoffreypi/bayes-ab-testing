@@ -6,43 +6,96 @@ source('utilities.R')
 
 shinyServer(function(input, output) {
   
+  # Initialize list of inputs
+  inputTagList <- tagList()
+  
+  output$allInputs <- renderUI({
+    n <- input$n_groups
+    
+    g_list = LETTERS[1:n]
+    inputTagList <- tagAppendChild(inputTagList, selectInput('group1idx','First Group',g_list))
+    inputTagList <- tagAppendChild(inputTagList, selectInput('group2idx','Second Group',g_list))
+    group_names = "control"
+    for(i in 1:n) {
+      # get letter A,B,C,etc
+      c = intToUtf8(64+i)
+      
+      # add an input for total revenue
+      inputTagList <- tagAppendChild(inputTagList, numericInput(
+        paste0('rev_',c),
+        paste0('total revenue ',c,':'),
+        min = 0,
+        max = 1e6,
+        value = 5000
+      ))
+      # add an input for people who converted (payed)
+      inputTagList <- tagAppendChild(inputTagList, numericInput(
+        paste0('success_',c),
+        paste0('converted payers ',c,':'),
+        min = 0,
+        max = 1e6,
+        value = 200
+      ))
+      # add an input for the total number of players
+      inputTagList <- tagAppendChild(inputTagList, numericInput(
+        paste0('total_',c),
+        paste0('all players ',c,':'),
+        min = 0,
+        max = 1e6,
+        value = 10000
+      ))
+      # call the first group control A, all the others test B, test C, etc
+      if (i>1) {
+        group_names[i] = paste0('test ',c)
+      }
+      # add an input to name each group
+      inputTagList <- tagAppendChild(inputTagList, textInput(
+        paste0('name_',c),
+        paste0('name ',c,':'),
+        value = group_names[i]
+      ))
+    }
+    inputTagList
+  })
+  
   observeEvent(input$button, {
-    req(
-      input$success_A,
-      input$total_A,
-      input$success_B,
-      input$total_B,
-      input$rev_A,
-      input$rev_B,
-      input$sim_sample
-    )
+    rev_A <- input[[paste0('rev_',input$group1idx)]]
+    rev_B <- input[[paste0('rev_',input$group2idx)]]
+    success_A <- input[[paste0('success_',input$group1idx)]]
+    success_B <- input[[paste0('success_',input$group2idx)]]
+    total_A <- input[[paste0('total_',input$group1idx)]]
+    total_B <- input[[paste0('total_',input$group2idx)]]
+    name_A <- input[[paste0('name_',input$group1idx)]]
+    name_B <- input[[paste0('name_',input$group2idx)]]
+    
+    print(success_A)
     if(
-      input$success_A >= 0 &&
-      input$total_A > 0 &&
-      input$success_B >= 0 &&
-      input$total_B > 0 &&
-      input$success_A <= input$total_A &&
-      input$success_B <= input$total_B &&
-      input$rev_A >= 0 &&
-      input$rev_B >= 0 &&
+      success_A >= 0 &&
+      total_A > 0 &&
+      success_B >= 0 &&
+      total_B > 0 &&
+      success_A <= total_A &&
+      success_B <= total_B &&
+      rev_A >= 0 &&
+      rev_B >= 0 &&
       input$sim_sample >= 2
     ) {
-      sample_A <- isolate({input$total_A})
-      sample_B <- isolate({input$total_B})
-      conv_A <- isolate({input$success_A/input$total_A})
-      conv_B <- isolate({input$success_B/input$total_B})
-      arppu_A <- isolate({input$rev_A/input$success_A})
-      arppu_B <- isolate({input$rev_B/input$success_B})
-      arpu_A <- isolate({input$rev_A/input$total_A})
-      arpu_B <- isolate({input$rev_B/input$total_B})
-      alpha_A <- isolate({input$success_A + 1})
-      alpha_B <- isolate({input$success_B + 1})
-      beta_A <- isolate({input$total_A - input$success_A + 1})
-      beta_B <- isolate({input$total_B - input$success_B + 1})
-      k_A <- isolate({input$success_A + 1})
-      k_B <- isolate({input$success_B + 1})
-      theta_A <- isolate({1/(1 + input$rev_A)})
-      theta_B <- isolate({1/(1 + input$rev_B)})
+      sample_A <- isolate({total_A})
+      sample_B <- isolate({total_B})
+      conv_A <- isolate({success_A/total_A})
+      conv_B <- isolate({success_B/total_B})
+      arppu_A <- isolate({rev_A/success_A})
+      arppu_B <- isolate({rev_B/success_B})
+      arpu_A <- isolate({rev_A/total_A})
+      arpu_B <- isolate({rev_B/total_B})
+      alpha_A <- isolate({success_A + 1})
+      alpha_B <- isolate({success_B + 1})
+      beta_A <- isolate({total_A - success_A + 1})
+      beta_B <- isolate({total_B - success_B + 1})
+      k_A <- isolate({success_A + 1})
+      k_B <- isolate({success_B + 1})
+      theta_A <- isolate({1/(1 + rev_A)})
+      theta_B <- isolate({1/(1 + rev_B)})
       res <- isolate({
         bayes_arpu(
           alphaA = alpha_A, betaA = beta_A,
@@ -68,8 +121,8 @@ shinyServer(function(input, output) {
         b <- hdi_diff[2]
         c(1.2*a - 0.2*b, 1.2*b - 0.2*a)
       }
-      name_A <- isolate({input$name_A})
-      name_B <- isolate({input$name_B})
+      name_A <- isolate({name_A})
+      name_B <- isolate({name_B})
       printPlot <- isolate({TRUE})
     } else {
       sample_A <- isolate({0})
